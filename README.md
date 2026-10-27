@@ -1,6 +1,6 @@
 # FastAPI Auth API (Docker Compose)
 
-A small authentication API built with FastAPI, async SQLAlchemy and PostgreSQL. It supports sign-up, login with JWT tokens, and a protected `/me` endpoint, with role-based access. The whole stack starts with one Docker Compose command.
+A small authentication API built with FastAPI, async SQLAlchemy and PostgreSQL. It supports sign-up, login with JWT tokens, and a protected `/me` endpoint. Each user has a role (new users get `voter`), but no endpoint enforces roles yet. The whole stack starts with one Docker Compose command.
 
 ## What's inside
 
@@ -9,7 +9,7 @@ A small authentication API built with FastAPI, async SQLAlchemy and PostgreSQL. 
 
 ## Quick start
 
-Requirements: Docker with Compose.
+Requirements: Docker with Compose, and a Unix-style shell with `openssl` (Linux, macOS or WSL).
 
 1. Clone the repo:
 
@@ -28,11 +28,15 @@ EOF
 chmod 600 .env
 ```
 
+Create `.env` only once. The database saves its password the first time it starts, so a different `.env` created later will not match it. If you need to start over, run `docker compose down -v` first (this deletes the data).
+
 3. Start everything:
 
 ```bash
 docker compose up --build
 ```
+
+Press `Ctrl+C` to stop it, or add `-d` to run it in the background.
 
 4. Open http://localhost:8000/docs to use the interactive Swagger page.
 
