@@ -1,3 +1,4 @@
+import uuid
 import os
 from contextlib import asynccontextmanager
 from datetime import datetime, timedelta, timezone
@@ -38,10 +39,8 @@ class LoginRequest(BaseModel):
     password: str
 
 class UserCreate(BaseModel):
-    id: str
     email: str
     password: str
-    role: str = "voter"
 
 # 4. TOKEN HELPER & AUTH DEPENDENCY
 def create_access_token(data: dict) -> str:
@@ -85,10 +84,10 @@ async def register_user(user_data: UserCreate, db: AsyncSession = Depends(get_db
     
     # Create and save user record
     new_user = UserModel(
-        id=user_data.id,
+        id=str(uuid.uuid4()),
         email=user_data.email,
         hashed_password=hash_password(user_data.password),
-        role=user_data.role
+        role="voter"
     )
     db.add(new_user)
     await db.commit()
