@@ -14,8 +14,8 @@ Requirements: Docker with Compose, and a Unix-style shell with `openssl` (Linux,
 1. Clone the repo:
 
 ```bash
-git clone -b docker-compose https://github.com/Phvl-0/FastApi-Supabase-Auth.git
-cd FastApi-Supabase-Auth
+git clone https://github.com/Phvl-0/FastAPI-Auth-Compose.git
+cd FastAPI-Auth-Compose
 ```
 
 2. Create your own `.env` file with random secrets (it is ignored by Git, so it never gets committed):
