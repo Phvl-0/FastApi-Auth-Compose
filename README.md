@@ -6,6 +6,7 @@ A small authentication API built with FastAPI, async SQLAlchemy and PostgreSQL. 
 
 - **api**: the FastAPI app, served by uvicorn (Python 3.12).
 - **postgres**: PostgreSQL 16 with a named volume (`pgdata`), so your data survives restarts.
+- **nginx**: a reverse proxy in front of the API. It serves HTTPS and is the only service reachable from your machine.
 
 ## Quick start
 
@@ -30,7 +31,17 @@ chmod 600 .env
 
 Create `.env` only once. The database saves its password the first time it starts, so a different `.env` created later will not match it. If you need to start over, run `docker compose down -v` first (this deletes the data).
 
-3. Start everything:
+3. Create a self-signed certificate for HTTPS (the `certs/` folder is ignored by Git, so the private key never gets committed):
+
+```bash
+mkdir -p certs
+openssl req -x509 -nodes -newkey rsa:2048 -days 365 \
+  -keyout certs/localhost.key -out certs/localhost.crt \
+  -subj "/CN=localhost" -addext "subjectAltName=DNS:localhost,IP:127.0.0.1"
+chmod 600 certs/localhost.key
+```
+
+4. Start everything:
 
 ```bash
 docker compose up --build
@@ -38,7 +49,7 @@ docker compose up --build
 
 Press `Ctrl+C` to stop it, or add `-d` to run it in the background.
 
-4. Open http://localhost:8000/docs to use the interactive Swagger page.
+5. Open https://localhost:8443/docs to use the interactive Swagger page. Your browser will warn about the self-signed certificate, which is expected for a local setup. Plain HTTP on port 8088 redirects to HTTPS.
 
 ## Using the API
 
@@ -54,13 +65,13 @@ docker compose down -v     # stops the stack AND deletes the database volume
 ## Security notes
 
 - Secrets come from the environment (`.env`), not from the code. The app refuses to start without `SECRET_KEY`.
-- The database is not exposed to the host, and the API is bound to `127.0.0.1` only.
+- The database and the API are not exposed to the host. Only the nginx reverse proxy is, bound to `127.0.0.1` (ports 8088 and 8443). It serves HTTPS (TLS 1.2 and 1.3), hides its version and adds `nosniff` and frame-denial headers.
 - The sign-up endpoint ignores any `id` or `role` sent by the caller: the server generates the id and every new user gets the role `voter`. This closes a privilege-escalation (mass-assignment) bug found during testing.
 - A placeholder secret in the project's first commit has been replaced and must never be used. If you deploy this, generate your own keys.
 
 ## Limitations
 
-- This is a development setup: plain HTTP, no HTTPS or reverse proxy.
+- This is a development setup: the HTTPS certificate is self-signed, so browsers warn about it. A real deployment needs a trusted certificate (for example Let's Encrypt) and a domain.
 - Dependency versions are not pinned yet, and some libraries (passlib, python-jose) are aging and may be replaced.
 - The container image has not been security-scanned yet.
 - The original version of this project used Supabase. This setup uses a local PostgreSQL container instead.
