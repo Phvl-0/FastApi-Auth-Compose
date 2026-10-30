@@ -72,6 +72,6 @@ docker compose down -v     # stops the stack AND deletes the database volume
 ## Limitations
 
 - This is a development setup: the HTTPS certificate is self-signed, so browsers warn about it. A real deployment needs a trusted certificate (for example Let's Encrypt) and a domain.
-- Dependency versions are pinned in `requirements.txt`. `passlib` is aging, and `python-jose` has an open vulnerability with no fixed release yet (CVE-2026-85394). Both are planned to be replaced.
-- The image was scanned with Trivy on 2026-10-30 (HIGH and CRITICAL only), by hand and not in CI. Python libraries: 2 findings, both in `python-jose` and its dependency `ecdsa`, with no fix available. The app signs tokens with HS256 and restricts the algorithm when decoding, which the python-jose advisory describes as the safe case, so they are believed not to be reachable here. Operating system layer (Debian base image): 44 HIGH findings, none with a fix available yet.
+- Dependency versions are pinned in `requirements.txt`. `passlib` is aging and may be replaced. The JWT library was changed from `python-jose` (open critical vulnerability CVE-2026-85394, no fixed release) to `PyJWT`.
+- The image was scanned with Trivy on 2026-10-30 (HIGH and CRITICAL only), by hand and not in CI. Before the JWT library swap there were 2 Python findings (`python-jose` and its dependency `ecdsa`); after the swap, a rescan shows 0 Python library findings. Operating system layer (Debian base image): 44 HIGH findings, none with a fix available yet. A clean scan means no known vulnerabilities in the database at scan time, not that the app is secure.
 - The original version of this project used Supabase. This setup uses a local PostgreSQL container instead.

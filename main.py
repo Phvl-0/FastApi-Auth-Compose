@@ -5,7 +5,8 @@ from datetime import datetime, timedelta, timezone
 from fastapi import FastAPI, HTTPException, status, Depends
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from pydantic import BaseModel
-from jose import jwt, JWTError
+import jwt
+from jwt import PyJWTError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 
@@ -65,7 +66,7 @@ def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(securit
             
         return {"user_id": user_id, "role": user_role, "email": email}
 
-    except JWTError:
+    except PyJWTError:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Token signature invalid or expired",
