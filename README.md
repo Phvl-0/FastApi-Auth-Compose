@@ -1,6 +1,6 @@
 # FastAPI Auth API (Docker Compose)
 
-A small authentication API built with FastAPI, async SQLAlchemy and PostgreSQL. It supports sign-up, login with JWT tokens, and a protected `/me` endpoint. Each user has a role (new users get `voter`), but no endpoint enforces roles yet. The whole stack starts with one Docker Compose command.
+A small authentication API built with FastAPI, async SQLAlchemy and PostgreSQL. It supports sign-up, login with JWT tokens, and a protected `/me` endpoint. Each user has a role (`voter` by default), and an admin-only endpoint enforces it. The whole stack starts with one Docker Compose command.
 
 ## What's inside
 
@@ -55,6 +55,16 @@ Press `Ctrl+C` to stop it, or add `-d` to run it in the background.
 
 In the Swagger page: register a user, log in to get a JWT, click **Authorize** and paste the token, then call `GET /me`.
 
+## Roles
+
+New users always get the role `voter`; sign-up ignores any role sent by the caller. An admin has to be promoted directly in the database:
+
+```bash
+docker compose exec db psql -U appuser -d authdb -c "UPDATE users SET role='admin' WHERE email='you@example.com';"
+```
+
+`GET /admin/users` is admin-only. It returns each user's id, email, role and active flag (never the password hash). A voter gets `403`, and a request without a token gets `401`. The role is read from the JWT, so a role change only takes effect the next time the user logs in.
+
 ## Stopping
 
 ```bash
@@ -71,6 +81,7 @@ docker compose down -v     # stops the stack AND deletes the database volume
 
 ## Limitations
 
+- Roles are read from the token, so demoting or promoting a user only takes effect at their next login. Only one endpoint is role-protected, and there are no automated tests yet.
 - This is a development setup: the HTTPS certificate is self-signed, so browsers warn about it. A real deployment needs a trusted certificate (for example Let's Encrypt) and a domain.
 - Dependency versions are pinned in `requirements.txt`. `passlib` is aging and may be replaced. The JWT library was changed from `python-jose` (open critical vulnerability CVE-2026-85394, no fixed release) to `PyJWT`.
 - The image is scanned with Trivy on every push by a GitHub Actions workflow (`.github/workflows/trivy.yml`): the actions are pinned to commit SHAs, the job has read-only permissions, and it fails on HIGH or CRITICAL findings that have a fix available. A manual scan on 2026-10-30 found 2 Python findings before the JWT library swap (`python-jose` and its dependency `ecdsa`) and 0 after. The Debian base image had 44 HIGH findings with no fix available yet; the workflow ignores unfixed findings, so those are not flagged. A clean scan means no known vulnerabilities in the database at scan time, not that the app is secure.

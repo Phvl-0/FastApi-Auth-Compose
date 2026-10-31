@@ -74,6 +74,17 @@ def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(securit
         )
 
 # 5. API ROUTES
+def require_role(*allowed_roles: str):
+    """Only let users whose token role is in allowed_roles through."""
+    def checker(current_user: dict = Depends(get_current_user)) -> dict:
+        if current_user.get("role") not in allowed_roles:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="You do not have permission to do this",
+            )
+        return current_user
+    return checker
+
 @app.post("/register")
 async def register_user(user_data: UserCreate, db: AsyncSession = Depends(get_db)):
     # Check if email exists in PostgreSQL
@@ -120,3 +131,16 @@ async def login(credentials: LoginRequest, db: AsyncSession = Depends(get_db)):
 @app.get("/me")
 def get_user_profile(current_user: dict = Depends(get_current_user)):
     return {"status": "authenticated", "profile": current_user}
+
+
+@app.get("/admin/users")
+async def list_users(
+    admin: dict = Depends(require_role("admin")),
+    db: AsyncSession = Depends(get_db),
+):
+    result = await db.execute(select(UserModel))
+    users = result.scalars().all()
+    return [
+        {"id": u.id, "email": u.email, "role": u.role, "is_active": u.is_active}
+        for u in users
+    ]
