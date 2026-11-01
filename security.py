@@ -1,27 +1,20 @@
-from passlib.context import CryptContext
+import bcrypt
 
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+MAX_BCRYPT_BYTES = 72
+
+
+def _prepare(password: str) -> bytes:
+    # bcrypt only uses the first 72 bytes. Cut explicitly, as passlib did, so
+    # existing hashes keep verifying and newer bcrypt versions do not raise an error.
+    return password.encode("utf-8")[:MAX_BCRYPT_BYTES]
+
 
 def hash_password(plain_password: str) -> str:
-    return pwd_context.hash(plain_password)
+    return bcrypt.hashpw(_prepare(plain_password), bcrypt.gensalt()).decode("utf-8")
+
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
-    return pwd_context.verify(plain_password, hashed_password)
-
-if __name__ == "__main__":
-    raw_pass = "MySecretPassword123!"
-
-    hashed = hash_password(raw_pass)
-    print("Stored Hash in DB:", hashed)
-
-    is_valid = verify_password("MySecretPassword123!", hashed)
-    print("Valid Password Test:", is_valid)
-
-    is_invalid = verify_password("WrongPassword!", hashed)
-    print("Wrong Password Test:", is_invalid)
-
-
-
-
-
-
+    try:
+        return bcrypt.checkpw(_prepare(plain_password), hashed_password.encode("utf-8"))
+    except ValueError:
+        return False
