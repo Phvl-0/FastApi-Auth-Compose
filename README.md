@@ -65,6 +65,19 @@ docker compose exec db psql -U appuser -d authdb -c "UPDATE users SET role='admi
 
 `GET /admin/users` is admin-only. It returns each user's id, email, role and active flag (never the password hash). A voter gets `403`, and a request without a token gets `401`. The role is read from the JWT, so a role change only takes effect the next time the user logs in.
 
+## Tests
+
+There are 14 automated tests (pytest) for sign-up, login, token handling and role enforcement. They include forged tokens (wrong key, `alg: none`, expired, no subject) and check that the admin endpoint refuses a voter and never returns password hashes.
+
+They run on every push in GitHub Actions (`.github/workflows/tests.yml`) against a throwaway Postgres container. To run them locally with the Compose stack running, use a separate database so your development data stays untouched:
+
+```bash
+docker compose exec db psql -U appuser -d authdb -c "CREATE DATABASE authdb_test;"
+docker compose run --rm --no-deps -v "$PWD":/app api sh -c 'export DATABASE_URL="${DATABASE_URL%/authdb}/authdb_test" && pip install -q -r requirements-dev.txt && python -m pytest -v'
+```
+
+Test tools live in `requirements-dev.txt`, so they are not part of the production image.
+
 ## Stopping
 
 ```bash
@@ -81,7 +94,7 @@ docker compose down -v     # stops the stack AND deletes the database volume
 
 ## Limitations
 
-- Roles are read from the token, so demoting or promoting a user only takes effect at their next login. Only one endpoint is role-protected, and there are no automated tests yet.
+- Roles are read from the token, so demoting or promoting a user only takes effect at their next login. Only one endpoint is role-protected, and the automated tests cover only sign-up, login, tokens and that endpoint. The test tools in `requirements-dev.txt` are not pinned yet.
 - This is a development setup: the HTTPS certificate is self-signed, so browsers warn about it. A real deployment needs a trusted certificate (for example Let's Encrypt) and a domain.
 - Dependency versions are pinned in `requirements.txt`. `passlib` is aging and may be replaced. The JWT library was changed from `python-jose` (open critical vulnerability CVE-2026-85394, no fixed release) to `PyJWT`.
 - The image is scanned with Trivy on every push by a GitHub Actions workflow (`.github/workflows/trivy.yml`): the actions are pinned to commit SHAs, the job has read-only permissions, and it fails on HIGH or CRITICAL findings that have a fix available. A manual scan on 2026-10-30 found 2 Python findings before the JWT library swap (`python-jose` and its dependency `ecdsa`) and 0 after. The Debian base image had 44 HIGH findings with no fix available yet; the workflow ignores unfixed findings, so those are not flagged. A clean scan means no known vulnerabilities in the database at scan time, not that the app is secure.
