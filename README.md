@@ -67,7 +67,7 @@ docker compose exec db psql -U appuser -d authdb -c "UPDATE users SET role='admi
 
 ## Tests
 
-There are 14 automated tests (pytest) for sign-up, login, token handling and role enforcement. They include forged tokens (wrong key, `alg: none`, expired, no subject) and check that the admin endpoint refuses a voter and never returns password hashes.
+There are 21 automated tests (pytest) for sign-up, login, token handling, role enforcement and password hashing (including hashes made by the previous library, to check that existing users can still log in). They include forged tokens (wrong key, `alg: none`, expired, no subject) and check that the admin endpoint refuses a voter and never returns password hashes.
 
 They run on every push in GitHub Actions (`.github/workflows/tests.yml`) against a throwaway Postgres container. To run them locally with the Compose stack running, use a separate database so your development data stays untouched:
 
@@ -94,7 +94,7 @@ docker compose down -v     # stops the stack AND deletes the database volume
 
 ## Limitations
 
-- Roles are read from the token, so demoting or promoting a user only takes effect at their next login. Only one endpoint is role-protected, and the automated tests cover only sign-up, login, tokens and that endpoint. The test tools in `requirements-dev.txt` are not pinned yet.
+- Roles are read from the token, so demoting or promoting a user only takes effect at their next login. Only one endpoint is role-protected, and the automated tests cover only sign-up, login, tokens, password hashing and that endpoint. The test tools in `requirements-dev.txt` are not pinned yet.
 - This is a development setup: the HTTPS certificate is self-signed, so browsers warn about it. A real deployment needs a trusted certificate (for example Let's Encrypt) and a domain.
 - Dependency versions are pinned in `requirements.txt`. The JWT library was changed from `python-jose` (open critical vulnerability CVE-2026-85394, no fixed release) to `PyJWT`, and password hashing now calls `bcrypt` directly instead of `passlib`, which relies on `crypt` (removed in Python 3.13). Hashes made by the old code still verify, and tests cover this. As before, passwords are cut at bcrypt's 72-byte limit.
 - The image is scanned with Trivy on every push by a GitHub Actions workflow (`.github/workflows/trivy.yml`): the actions are pinned to commit SHAs, the job has read-only permissions, and it fails on HIGH or CRITICAL findings that have a fix available. A manual scan on 2026-10-30 found 2 Python findings before the JWT library swap (`python-jose` and its dependency `ecdsa`) and 0 after. The Debian base image had 44 HIGH findings with no fix available yet; the workflow ignores unfixed findings, so those are not flagged. A clean scan means no known vulnerabilities in the database at scan time, not that the app is secure.
